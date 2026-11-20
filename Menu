@@ -1,0 +1,370 @@
+-- Color Gun Hub | Owner: nhiiz_matacc (Mobile / Delta Friendly)
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local OWNER_NAME = "nhiiz_matacc"
+local V1_URL = "https://raw.githubusercontent.com/bbbbhbb099-pixel/Jjjb/refs/heads/main/Color%20gun"
+local CNP_URL = "https://raw.githubusercontent.com/bbbbhbb099-pixel/Hhb/refs/heads/main/Cnpv4"
+
+local oldGui = playerGui:FindFirstChild("ColorGunHub_nhiiz_matacc")
+if oldGui then
+	oldGui:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ColorGunHub_nhiiz_matacc"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = playerGui
+
+local function makeDraggable(frame, dragHandle)
+	dragHandle = dragHandle or frame
+	local dragging = false
+	local dragInput = nil
+	local dragStart = nil
+	local startPos = nil
+
+	dragHandle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	dragHandle.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging and dragStart and startPos then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
+
+local function spawnBubbles(parentFrame, count)
+	if not parentFrame or not parentFrame.Parent then return end
+	for _ = 1, (count or 10) do
+		task.spawn(function()
+			local size = math.random(14, 28)
+			local bubble = Instance.new("Frame")
+			bubble.Size = UDim2.fromOffset(size, size)
+			bubble.Position = UDim2.new(math.random(10, 90) / 100, 0, math.random(20, 90) / 100, 0)
+			bubble.AnchorPoint = Vector2.new(0.5, 0.5)
+			bubble.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			bubble.BackgroundTransparency = 0.45
+			bubble.BorderSizePixel = 0
+			bubble.ZIndex = (parentFrame.ZIndex or 10) + 5
+			bubble.Parent = parentFrame
+
+			Instance.new("UICorner", bubble).CornerRadius = UDim.new(1, 0)
+			local stroke = Instance.new("UIStroke", bubble)
+			stroke.Color = Color3.fromRGB(255, 182, 212)
+			stroke.Thickness = 1.5
+			stroke.Transparency = 0.25
+
+			local tw = TweenService:Create(bubble, TweenInfo.new(math.random(50, 80) / 100, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(size + 14, size + 14),
+				Position = UDim2.new(bubble.Position.X.Scale + (math.random(-10, 10) / 100), 0, math.max(0.06, bubble.Position.Y.Scale - 0.22), 0),
+				BackgroundTransparency = 1
+			})
+			tw:Play()
+			tw.Completed:Connect(function()
+				bubble:Destroy()
+			end)
+		end)
+	end
+end
+
+-- =========================================================
+-- 1. FULL-SCREEN WELCOME + LOADING (KHONG DUNG O NHO)
+-- =========================================================
+local loadingScreen = Instance.new("Frame")
+loadingScreen.Name = "FullScreenLoading"
+loadingScreen.Size = UDim2.fromScale(1, 1)
+loadingScreen.Position = UDim2.fromScale(0, 0)
+loadingScreen.BackgroundColor3 = Color3.fromRGB(255, 196, 220) -- Hong nhat trong suot toan man hinh
+loadingScreen.BackgroundTransparency = 0.35
+loadingScreen.BorderSizePixel = 0
+loadingScreen.ZIndex = 60
+loadingScreen.Parent = gui
+
+local welcomeLbl = Instance.new("TextLabel")
+welcomeLbl.Size = UDim2.new(0.85, 0, 0, 48)
+welcomeLbl.Position = UDim2.new(0.5, 0, 0.4, 0)
+welcomeLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+welcomeLbl.BackgroundTransparency = 1
+welcomeLbl.Text = "WELCOME TO COLOR GUN HUB"
+welcomeLbl.TextColor3 = Color3.fromRGB(110, 20, 58)
+welcomeLbl.Font = Enum.Font.GothamBlack
+welcomeLbl.TextSize = 20
+welcomeLbl.ZIndex = 61
+welcomeLbl.Parent = loadingScreen
+
+local pctLbl = Instance.new("TextLabel")
+pctLbl.Size = UDim2.new(0.6, 0, 0, 28)
+pctLbl.Position = UDim2.new(0.5, 0, 0.49, 0)
+pctLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+pctLbl.BackgroundTransparency = 1
+pctLbl.Text = "Loading... 0%"
+pctLbl.TextColor3 = Color3.fromRGB(125, 30, 72)
+pctLbl.Font = Enum.Font.GothamBold
+pctLbl.TextSize = 15
+pctLbl.ZIndex = 61
+pctLbl.Parent = loadingScreen
+
+local barTrack = Instance.new("Frame")
+barTrack.Size = UDim2.new(0.56, 0, 0, 14)
+barTrack.Position = UDim2.new(0.5, 0, 0.56, 0)
+barTrack.AnchorPoint = Vector2.new(0.5, 0.5)
+barTrack.BackgroundColor3 = Color3.fromRGB(255, 240, 246)
+barTrack.BackgroundTransparency = 0.25
+barTrack.BorderSizePixel = 0
+barTrack.ZIndex = 61
+barTrack.Parent = loadingScreen
+Instance.new("UICorner", barTrack).CornerRadius = UDim.new(1, 0)
+
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(255, 115, 170)
+barFill.BorderSizePixel = 0
+barFill.ZIndex = 62
+barFill.Parent = barTrack
+Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
+-- =========================================================
+-- 2. DRAGGABLE TOGGLE BUTTON: COLORGUN
+-- =========================================================
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "COLORGUN"
+toggleBtn.Size = UDim2.fromOffset(118, 42)
+toggleBtn.Position = UDim2.new(0.03, 0, 0.16, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 178, 210)
+toggleBtn.BackgroundTransparency = 0.25
+toggleBtn.Text = "COLORGUN"
+toggleBtn.TextColor3 = Color3.fromRGB(90, 15, 50)
+toggleBtn.Font = Enum.Font.GothamBlack
+toggleBtn.TextSize = 14
+toggleBtn.Visible = false
+toggleBtn.ZIndex = 30
+toggleBtn.Parent = gui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+local tStroke = Instance.new("UIStroke", toggleBtn)
+tStroke.Color = Color3.fromRGB(255, 255, 255)
+tStroke.Thickness = 2
+
+makeDraggable(toggleBtn, toggleBtn)
+
+-- =========================================================
+-- 3. MAIN MENU (TRANSLUCENT LIGHT PINK + OWNER HEADER)
+-- =========================================================
+local mainMenu = Instance.new("Frame")
+mainMenu.Name = "MainMenu"
+mainMenu.Size = UDim2.fromOffset(470, 285)
+mainMenu.Position = UDim2.fromScale(0.5, 0.5)
+mainMenu.AnchorPoint = Vector2.new(0.5, 0.5)
+mainMenu.BackgroundColor3 = Color3.fromRGB(255, 198, 221)
+mainMenu.BackgroundTransparency = 0.42
+mainMenu.BorderSizePixel = 0
+mainMenu.Visible = false
+mainMenu.ZIndex = 12
+mainMenu.Parent = gui
+Instance.new("UICorner", mainMenu).CornerRadius = UDim.new(0, 16)
+local mStroke = Instance.new("UIStroke", mainMenu)
+mStroke.Color = Color3.fromRGB(255, 255, 255)
+mStroke.Thickness = 2
+
+local headerBar = Instance.new("Frame")
+headerBar.Size = UDim2.new(1, -16, 0, 34)
+headerBar.Position = UDim2.new(0, 8, 0, 8)
+headerBar.BackgroundColor3 = Color3.fromRGB(255, 226, 238)
+headerBar.BackgroundTransparency = 0.35
+headerBar.BorderSizePixel = 0
+headerBar.ZIndex = 13
+headerBar.Parent = mainMenu
+Instance.new("UICorner", headerBar).CornerRadius = UDim.new(0, 10)
+
+local ownerLabel = Instance.new("TextLabel")
+ownerLabel.Size = UDim2.new(1, -16, 1, 0)
+ownerLabel.Position = UDim2.new(0, 10, 0, 0)
+ownerLabel.BackgroundTransparency = 1
+ownerLabel.TextXAlignment = Enum.TextXAlignment.Left
+ownerLabel.Text = "Owner: " .. OWNER_NAME .. "  |  SCRIPT HUB"
+ownerLabel.TextColor3 = Color3.fromRGB(110, 20, 60)
+ownerLabel.Font = Enum.Font.GothamBold
+ownerLabel.TextSize = 13
+ownerLabel.ZIndex = 14
+ownerLabel.Parent = headerBar
+
+makeDraggable(mainMenu, headerBar)
+
+local leftCol = Instance.new("Frame")
+leftCol.Size = UDim2.new(0.34, -12, 1, -98)
+leftCol.Position = UDim2.new(0, 8, 0, 48)
+leftCol.BackgroundColor3 = Color3.fromRGB(255, 220, 235)
+leftCol.BackgroundTransparency = 0.4
+leftCol.BorderSizePixel = 0
+leftCol.ZIndex = 13
+leftCol.Parent = mainMenu
+Instance.new("UICorner", leftCol).CornerRadius = UDim.new(0, 12)
+
+local leftList = Instance.new("UIListLayout", leftCol)
+leftList.Padding = UDim.new(0, 8)
+leftList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local leftPad = Instance.new("UIPadding", leftCol)
+leftPad.PaddingTop = UDim.new(0, 10)
+leftPad.PaddingLeft = UDim.new(0, 8)
+leftPad.PaddingRight = UDim.new(0, 8)
+
+local rightBox = Instance.new("Frame")
+rightBox.Size = UDim2.new(0.66, -8, 1, -98)
+rightBox.Position = UDim2.new(0.34, 2, 0, 48)
+rightBox.BackgroundColor3 = Color3.fromRGB(255, 232, 242)
+rightBox.BackgroundTransparency = 0.35
+rightBox.BorderSizePixel = 0
+rightBox.ZIndex = 13
+rightBox.Parent = mainMenu
+Instance.new("UICorner", rightBox).CornerRadius = UDim.new(0, 12)
+
+local rightText = Instance.new("TextLabel")
+rightText.Size = UDim2.new(1, -16, 1, -16)
+rightText.Position = UDim2.new(0, 8, 0, 8)
+rightText.BackgroundTransparency = 1
+rightText.TextWrapped = true
+rightText.TextYAlignment = Enum.TextYAlignment.Top
+rightText.TextXAlignment = Enum.TextXAlignment.Left
+rightText.TextColor3 = Color3.fromRGB(95, 20, 55)
+rightText.Font = Enum.Font.GothamMedium
+rightText.TextSize = 13
+rightText.ZIndex = 14
+rightText.Text = "COLOR GUN V1\n\nScript:\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/bbbbhbb099-pixel/Jjjb/refs/heads/main/Color%20gun\"))()\n\nPress EXECUTE SCRIPT below to run."
+rightText.Parent = rightBox
+
+local execBtn = Instance.new("TextButton")
+execBtn.Name = "ExecuteScript"
+execBtn.Size = UDim2.new(1, -16, 0, 38)
+execBtn.Position = UDim2.new(0, 8, 1, -46)
+execBtn.BackgroundColor3 = Color3.fromRGB(255, 130, 180)
+execBtn.BackgroundTransparency = 0.15
+execBtn.Text = "EXECUTE SCRIPT"
+execBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+execBtn.Font = Enum.Font.GothamBlack
+execBtn.TextSize = 14
+execBtn.ZIndex = 14
+execBtn.Parent = mainMenu
+Instance.new("UICorner", execBtn).CornerRadius = UDim.new(0, 10)
+
+-- =========================================================
+-- 4. LEFT BUTTONS: COLOR GUN V1 & cnpmenu
+-- =========================================================
+local currentScript = "V1"
+
+local btnV1 = Instance.new("TextButton")
+btnV1.Size = UDim2.new(1, 0, 0, 40)
+btnV1.BackgroundColor3 = Color3.fromRGB(255, 155, 198)
+btnV1.BackgroundTransparency = 0.15
+btnV1.Text = "COLOR GUN V1"
+btnV1.TextColor3 = Color3.fromRGB(95, 15, 50)
+btnV1.Font = Enum.Font.GothamBold
+btnV1.TextSize = 12
+btnV1.ZIndex = 14
+btnV1.Parent = leftCol
+Instance.new("UICorner", btnV1).CornerRadius = UDim.new(0, 8)
+
+local btnCnp = Instance.new("TextButton")
+btnCnp.Name = "cnpmenu"
+btnCnp.Size = UDim2.new(1, 0, 0, 40)
+btnCnp.BackgroundColor3 = Color3.fromRGB(255, 175, 210)
+btnCnp.BackgroundTransparency = 0.25
+btnCnp.Text = "cnpmenu"
+btnCnp.TextColor3 = Color3.fromRGB(95, 15, 50)
+btnCnp.Font = Enum.Font.GothamBold
+btnCnp.TextSize = 12
+btnCnp.ZIndex = 14
+btnCnp.Parent = leftCol
+Instance.new("UICorner", btnCnp).CornerRadius = UDim.new(0, 8)
+
+btnV1.MouseButton1Click:Connect(function()
+	currentScript = "V1"
+	btnV1.BackgroundTransparency = 0.1
+	btnCnp.BackgroundTransparency = 0.35
+	rightText.Text = "COLOR GUN V1\n\nScript:\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/bbbbhbb099-pixel/Jjjb/refs/heads/main/Color%20gun\"))()\n\nPress EXECUTE SCRIPT below to run."
+	spawnBubbles(mainMenu, 6)
+end)
+
+btnCnp.MouseButton1Click:Connect(function()
+	currentScript = "CNP"
+	btnV1.BackgroundTransparency = 0.35
+	btnCnp.BackgroundTransparency = 0.1
+	rightText.Text = "cnpmenu\n\nScript:\nloadstring(game:HttpGet(\"https://raw.githubusercontent.com/bbbbhbb099-pixel/Hhb/refs/heads/main/Cnpv4\"))()\n\nPress EXECUTE SCRIPT below to run."
+	spawnBubbles(mainMenu, 6)
+end)
+
+execBtn.MouseButton1Click:Connect(function()
+	spawnBubbles(mainMenu, 10)
+	if currentScript == "V1" then
+		local ok, err = pcall(function()
+			loadstring(game:HttpGet(V1_URL))()
+		end)
+		rightText.Text = ok and ("Executed COLOR GUN V1!\nOwner: " .. OWNER_NAME) or ("Error:\n" .. tostring(err))
+	else
+		local ok, err = pcall(function()
+			loadstring(game:HttpGet(CNP_URL))()
+		end)
+		rightText.Text = ok and ("Executed cnpmenu!\nOwner: " .. OWNER_NAME) or ("Error:\n" .. tostring(err))
+	end
+end)
+
+local function openMainMenu()
+	mainMenu.Visible = true
+	mainMenu.Size = UDim2.fromOffset(220, 120)
+	TweenService:Create(mainMenu, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.fromOffset(470, 285)
+	}):Play()
+	spawnBubbles(mainMenu, 14)
+end
+
+local menuOpen = false
+toggleBtn.MouseButton1Click:Connect(function()
+	menuOpen = not menuOpen
+	if menuOpen then
+		openMainMenu()
+	else
+		mainMenu.Visible = false
+	end
+end)
+
+-- =========================================================
+-- 5. LOADING DU 100% (TOC DO VUA PHAI) ROI MOI HIEN MENU
+-- =========================================================
+task.spawn(function()
+	for p = 0, 100 do
+		pctLbl.Text = "Loading... " .. p .. "%"
+		barFill.Size = UDim2.new(p / 100, 0, 1, 0)
+		task.wait(0.035) -- Tong khoang ~3.5 giay, du 100%, khong cham qua cung khong vut cai mat
+	end
+	task.wait(0.15)
+	loadingScreen:Destroy()
+	toggleBtn.Visible = true
+	menuOpen = true
+	openMainMenu()
+end)
